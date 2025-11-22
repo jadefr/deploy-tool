@@ -1,0 +1,14 @@
+package main
+
+import (
+	"fmt"
+	"log"
+)
+
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+	fmt.Printf("Config loaded: %+v\n", cfg)
+}

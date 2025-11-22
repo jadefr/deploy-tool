@@ -1,0 +1,67 @@
+# Binaries
+/dist/
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build and test outputs
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Go modules and workspace
+go.work
+go.work.sum
+
+# Dependency directories (vendor is optional — commit vendor/ if you vendor deps)
+# vendor/
+
+# Environment and secret files
+.env
+.env.local
+.env.*.local
+secrets.yaml
+*.key
+*.pem
+
+# Docker
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Helm / Kubernetes local generated files
+helm-debug-*.yaml
+*.kubeconfig
+.kube/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.iml
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and runtime files
+*.log
+tmp/
+tmp-*/
+*.pid
+
+# Generated files / artifacts
+dist/
+build/
+
+# Go test cache
+/testcache/
+
+# Misc
+.vagrant/
+*.swp
