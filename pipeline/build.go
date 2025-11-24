@@ -3,9 +3,11 @@ package pipeline
 import (
 	"fmt"
 	"os/exec"
+
+	"github.com/jadefr/deploy-tool/config"
 )
 
-func BuildDockerImage(cfg *Config) error {
+func BuildDockerImage(cfg *config.Config) error {
 	dockerCmd := exec.Command("docker", "build", "-t", cfg.DockerImage, ".")
 	output, err := dockerCmd.CombinedOutput()
 	if err != nil {

@@ -3,9 +3,11 @@ package pipeline
 import (
 	"fmt"
 	"os/exec"
+
+	"github.com/jadefr/deploy-tool/config"
 )
 
-func DeployToKubernetes(cfg *Config) error {
+func DeployToKubernetes(cfg *config.Config) error {
 	helmCmd := exec.Command("helm", "upgrade", "--install", cfg.AppName, cfg.HelmChartPath, "--namespace", cfg.KubernetesNamespace)
 	output, err := helmCmd.CombinedOutput()
 	if err != nil {

@@ -23,6 +23,7 @@ go.work.sum
 
 # Environment and secret files
 .env
+.envrc
 .env.local
 .env.*.local
 secrets.yaml

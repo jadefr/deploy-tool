@@ -1,0 +1,57 @@
+# Binaries and build artifacts
+deploy-tool
+/bin/
+/dist/
+/build/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+
+# Logs and temporary files
+*.log
+*.out
+*.pid
+tmp/
+tmp-*/
+
+# Dependency/vendor (ignore unless you vendor dependencies intentionally)
+vendor/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+secrets.yaml
+
+# VCS and metadata
+.git
+.gitignore
+.gitattributes
+
+# IDE/editor configs
+.vscode/
+.idea/
+*.iml
+*.sublime-workspace
+*.sublime-project
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Coverage and profiling
+coverage.*
+*.coverprofile
+profile.cov
+
+# Docker-related overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Kubernetes configs (local only)
+*.kubeconfig
+.kube/
+helm-debug-*.yaml
