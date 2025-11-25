@@ -1,81 +1,247 @@
 # Deploy Tool
 
-A lightweight continuous deployment utility written in Go that automates testing, Docker image builds, image publishing, and Helm-based deployments to Kubernetes clusters. It’s opinionated, easy to extend, and designed to be integrated into local workflows or CI pipelines.
+A lightweight continuous deployment utility written in Go that automates the full pipeline: build Docker images, and deploy to Kubernetes using Helm. Run it locally, in a container, or from CI/CD. Designed to be simple, extensible, and production-ready.
 
 ## Features
-- Detect and run pipeline stages: test → build → push → deploy
-- Build Docker images and optionally push to a registry
-- Deploy using Helm (install / upgrade) into a Kubernetes namespace
-- Configuration via environment variables for simple integration
-- Extensible pipeline: add scanning, notifications, rollbacks, multi-cluster steps
 
-## Quickstart
-### Prerequisites
-- Go 1.18+
-- Docker (for build/push)
-- Helm (for deploy)
-- kubectl configured for the target cluster (if deploying to Kubernetes)
+- **Three-stage pipeline**: build Docker image → deploy to Kubernetes → run tests
+- **Selective execution**: skip any stage via env vars (`SKIP_BUILD`, `SKIP_DEPLOY`, `SKIP_TEST`)
+- **Helm-native**: uses Helm for declarative, idempotent deployments
+- **Configuration via env**: simple integration into any automation tool
+- **Containerized**: includes `Dockerfile` for production and `Dockerfile.debug` for local testing
+- **Testable**: unit tests + integration test script with helm dry-run support
+- **No CI/CD required**: runs standalone; add to Jenkins, GitHub Actions, GitLab CI, or cron jobs
 
-### Clone and prepare
-```
-git clone https://jadefr/deploy-tool.git
+## Prerequisites
+
+- **Go 1.25.4+** (for building)
+- **Docker** (for building images, and to run the debug container)
+- **Helm 3.x** (for deployments)
+- **kubectl** (to interact with clusters)
+- **kind** or **minikube** (optional, for local testing)
+
+## Quick Start
+
+### 1. Clone and build
+
+```bash
+git clone https://github.com/jadefr/deploy-tool.git
 cd deploy-tool
-go mod tidy
+go build -o deploy-tool .
 ```
 
-### Set environment variables (eg)
+### 2. (Optional) Create a local kind cluster
+
+```bash
+kind create cluster
+kubectl cluster-info
 ```
+
+### 3. Build and load a test image into kind
+
+```bash
+docker build -t my-app:local .
+kind load docker-image my-app:local
+```
+
+### 4. Deploy using deploy-tool
+
+```bash
 export APP_NAME=my-app
-export DOCKER_IMAGE=my-registry/my-app:latest
+export DOCKER_IMAGE=my-app:local
 export K8S_NAMESPACE=default
 export HELM_CHART_PATH=./charts/my-app
+
+# Skip build (already done) and test (not set up); run deploy only
+SKIP_BUILD=1 SKIP_TEST=1 ./deploy-tool
 ```
 
-### Run locally
-```
-go run main.go
-```
+### 5. Verify deployment
 
-### Build a binary
-```
-go build -o deploy-tool .
-./deploy-tool
+```bash
+kubectl get deployments -n default
+kubectl get pods -n default
 ```
 
-### Run pipeline steps manually (debug)
-```
-# tests
-go test ./...
+## Running Tests
 
-# build
-docker build -t $DOCKER_IMAGE .
+### Unit tests and integration tests
 
-# push
-docker push $DOCKER_IMAGE
-
-# helm deploy
-helm upgrade --install $APP_NAME $HELM_CHART_PATH --namespace $K8S_NAMESPACE
+```bash
+make test
 ```
 
+This runs:
+- Binary build
+- Unit tests (4 test functions)
+- Helm chart validation
+- Helm dry-run (simulates deploy without modifying cluster)
+- Full pipeline with all stages skipped (config loading only)
+
+### Run Helm deploy (dry-run or real)
+
+```bash
+# Dry-run only (no cluster changes)
+make test-helm-dryrun
+
+# Real deploy to kind cluster (if configured)
+SKIP_BUILD=1 SKIP_TEST=1 ./deploy-tool
+```
+
+## Using Make targets
+
+```bash
+make build              # Build binary
+make run-host           # Build and run binary on host (uses host docker/helm)
+make build-debug        # Build Dockerfile.debug image with Docker CLI, Helm, kubectl
+make run-debug          # Run debug container with repo and docker socket mounted
+make run-debug-shell    # Interactive shell in debug container
+make test               # Run full integration tests
+make test-helm-dryrun   # Test helm dry-run
+make clean              # Remove binary
+```
+
+### Example: Deploy in container
+
+```bash
+# Build debug image
+make build-debug
+
+# Run deploy in container (mounts docker socket to use host Docker)
+make run-debug SKIP_BUILD=1 SKIP_TEST=1
+```
 
 ## Configuration
-The tool uses environment variables (defaults shown):
-- APP_NAME (default: meu-app) — release name for Helm
-- DOCKER_IMAGE (default: meu-app:latest) — image tag to build/push
-- KUBE_NAMESPACE (default: default) — target Kubernetes namespace
-- HELM_CHART_PATH (default: ./charts/meu-app) — path to Helm chart
 
-You can change Load() in config/config.go to support .env files or CLI flags.
+Environment variables (defaults shown in `config/config.go`):
 
-## Extending the tool (ideas)
-- Stream command stdout/stderr and add structured logging
-- Add registry authentication (Docker Hub, ECR, GCR)
-- Add Helm value injection and templating per environment
-- Implement rollback and release history management using Helm APIs
-- Create a small web UI or gRPC API to trigger and monitor runs
-- Add a GitHub Actions / GitLab CI example that triggers the tool in CI
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `APP_NAME` | `my-app` | Release name for Helm |
+| `DOCKER_IMAGE` | `my-app:latest` | Docker image tag to build/push |
+| `K8S_NAMESPACE` | `default` | Target Kubernetes namespace |
+| `HELM_CHART_PATH` | `./charts/my-app` | Path to Helm chart directory |
+| `SKIP_BUILD` | (not set) | Set to any value to skip build step |
+| `SKIP_DEPLOY` | (not set) | Set to any value to skip deploy step |
+| `SKIP_TEST` | (not set) | Set to any value to skip test step |
+
+### Customizing config
+
+Edit `config/config.go` to:
+- Load from `.env` files
+- Parse CLI flags
+- Read from vaults or config servers
+
+## Project Structure
+
+```
+deploy-tool/
+├── main.go                 # Entry point
+├── go.mod                  # Go module definition
+├── Dockerfile              # Production image (distroless)
+├── Dockerfile.debug        # Debug image (debian, includes docker/helm/kubectl)
+├── Makefile                # Build and run targets
+├── test.sh                 # Integration test script
+├── config/
+│   └── config.go           # Configuration loading
+├── pipeline/
+│   ├── build.go            # Docker build step
+│   ├── deploy.go           # Helm deploy step
+│   ├── test.go             # Helm test step
+│   └── pipeline_test.go    # Unit tests
+└── charts/
+    └── my-app/             # Example Helm chart for testing
+        ├── Chart.yaml
+        ├── values.yaml
+        └── templates/
+            └── deployment.yaml
+```
+
+## Examples
+
+### Local deployment to kind
+
+```bash
+# Create kind cluster
+kind create cluster
+
+# Build and load image
+docker build -t my-app:local .
+kind load docker-image my-app:local
+
+# Deploy
+export DOCKER_IMAGE=my-app:local
+SKIP_BUILD=1 SKIP_TEST=1 ./deploy-tool
+
+# Verify
+kubectl get pods
+kubectl get deployments my-app
+```
+
+### Deploy in Docker (containerized)
+
+```bash
+make build-debug
+make run-debug SKIP_BUILD=1 SKIP_TEST=1
+```
+
+### Use in CI/CD (GitHub Actions example)
+
+```yaml
+- name: Deploy with deploy-tool
+  env:
+    APP_NAME: my-app
+    DOCKER_IMAGE: my-registry/my-app:${{ github.sha }}
+    K8S_NAMESPACE: production
+    HELM_CHART_PATH: ./charts/my-app
+  run: |
+    go build -o deploy-tool .
+    SKIP_TEST=1 ./deploy-tool
+```
+
+### Use in cron job
+
+```bash
+0 2 * * * /home/user/deploy-tool/deploy-tool >> /var/log/deploy-tool.log 2>&1
+```
+
+## Troubleshooting
+
+### "could not import deploy-tool/config"
+
+Ensure `go.mod` uses the correct module path: `module github.com/jadefr/deploy-tool`
+
+### Docker build fails in Dockerfile
+
+Ensure `Dockerfile` builder uses `golang:1.25.4` (matches `go.mod`)
+
+### Helm deploy fails with "kubernetes cluster unreachable"
+
+Configure `kubectl`: `kubectl config current-context` and `kubectl cluster-info`
+
+### Container deploy fails to find docker socket
+
+Mount the socket: `-v /var/run/docker.sock:/var/run/docker.sock`
+
+## Extending the tool
+
+- **Add pre-deploy checks**: smoke tests, image scanning
+- **Add post-deploy validation**: health checks, canary rollouts
+- **Add registry auth**: support for Docker Hub, ECR, GCR
+- **Add templating**: inject env-specific Helm values
+- **Add webhooks**: notify Slack/PagerDuty on deploy
+- **Add UI/API**: simple dashboard or gRPC trigger
+
+See pipeline functions in `pipeline/*.go` for extension points.
 
 ## Contributing
-- Fork the repo, create a branch, implement features or fixes, open a PR.
-- Keep go.mod tidy and include tests for new behavior.
-- Don’t commit secrets or kubeconfigs; add them to .gitignore
+
+- Fork the repo, create a branch, implement your feature or fix
+- Run `make test` to validate
+- Keep `go.mod` tidy: `go mod tidy`
+- Add tests for new behavior
+- Submit a PR
+
+## License
+
+MIT
