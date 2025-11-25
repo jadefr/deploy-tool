@@ -42,5 +42,13 @@ run-debug-shell: build-debug
 		-e DOCKER_IMAGE=my-app:local \
 		$(DEBUG_IMAGE) /bin/bash
 
+test:
+	bash test.sh
+
+test-helm-dryrun: build
+	SKIP_BUILD=1 SKIP_TEST=1 \
+	HELM_CHART_PATH=./charts/my-app \
+	./$(APP_NAME)
+
 clean:
 	rm -f $(APP_NAME)

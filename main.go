@@ -41,5 +41,5 @@ func main() {
 		fmt.Println("⏭️  SKIP_TEST set, skipping test step")
 	}
 
-	fmt.Printf("🎉 Deployment pipeline completed successfully!")
+	fmt.Println("🎉 Deployment pipeline completed successfully!")
 }
